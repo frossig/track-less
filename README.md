@@ -21,6 +21,8 @@ Perfect for musicians who want to practice along with songs minus their instrume
 - **High Quality Output**: 32-bit float WAV files with proper normalization
 - **Automatic Cleanup**: Temporary files are removed automatically
 - **Multiple Instrument Removal**: Remove any combination of: guitar, vocals, drums, bass, piano, or other
+- **Stem Extraction**: Export raw stem files instead of remixing (great for DAW work)
+- **Preview Mode**: Process only the first 30 seconds for quick testing
 
 ## Prerequisites
 
@@ -113,7 +115,9 @@ Options:
   -b, --bass       Remove bass track
   -p, --piano      Remove piano track
   --other          Remove other instruments track
-  -o, --output     Output directory (default: ~/Projects/track-less-output)
+  -s, --stem       Extract stems instead of mixing (saves raw stem files)
+  -P, --preview    Process only the first 30 seconds (quick test)
+  -o, --output     Output directory (default: ~/Music/track-less)
   --version        Show the version and exit
   --help           Show this message and exit
 ```
@@ -133,6 +137,18 @@ track-less "URL" -v -g
 Remove drums (for drum practice):
 ```bash
 track-less "URL" -d
+```
+
+Extract raw stem files (for DAW editing):
+```bash
+track-less "URL" -g -s        # saves guitar.wav separately
+track-less "URL" -g -v -s     # saves guitar.wav and vocals.wav
+```
+
+Preview mode (only 30 seconds, much faster):
+```bash
+track-less "URL" -g -P
+track-less "URL" -g -v -s -P  # combine with stem extraction
 ```
 
 Custom output directory:
@@ -160,11 +176,11 @@ track-less "https://vimeo.com/123456" -v            # Remove vocals
 
 ## Output
 
-- Default output directory: `~/Projects/track-less-output/`
+- Default output directory: `~/Music/track-less/`
 - Output format: 32-bit float WAV
-- Filename format: `{SongTitle}_no_{instruments}.wav`
-  - Example: `Never_Gonna_Give_You_Up_no_guitar.wav`
-  - Example: `Song_Name_no_guitar_vocals.wav`
+- Filename format:
+  - Normal mode: `{SongTitle}_no_{instruments}.wav` (e.g. `Song_no_guitar.wav`)
+  - Stem mode (`-s`): `{SongTitle}_{instrument}.wav` (e.g. `Song_guitar.wav`)
 
 ## Performance
 
@@ -218,9 +234,7 @@ Separation is CPU-intensive and can take 5-15 minutes per song. If you have a CU
 ## Future Enhancements
 
 See [ROADMAP.md](ROADMAP.md) for planned features including:
-- Progress bars for each stage
 - Batch processing (multiple URLs)
-- Preview mode (first 30 seconds)
 - GPU acceleration detection and control
 - Output format options (MP3, FLAC)
 - Quality presets (fast/balanced/best)
