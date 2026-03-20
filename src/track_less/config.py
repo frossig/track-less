@@ -3,7 +3,7 @@
 from pathlib import Path
 
 # Output directory for processed audio files
-OUTPUT_DIR = Path.home() / "Projects" / "track-less-output"
+OUTPUT_DIR = Path.home() / "Music" / "track-less"
 
 # Demucs model to use (6-stem separation including guitar)
 DEMUCS_MODEL = "htdemucs_6s"

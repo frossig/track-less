@@ -30,7 +30,7 @@ def separate_stems(audio_file: Path, output_dir: str) -> Path:
     try:
         # Initialize the Demucs separator with htdemucs_6s model
         # This model separates: drums, bass, vocals, guitar, piano, other
-        separator = demucs.api.Separator(model=DEMUCS_MODEL)
+        separator = demucs.api.Separator(model=DEMUCS_MODEL, progress=True)
 
         # Separate the audio file
         origin, separated = separator.separate_audio_file(str(audio_file))

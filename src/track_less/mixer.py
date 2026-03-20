@@ -65,9 +65,9 @@ def mix_stems(
         if mixed_audio is None:
             raise MixingError("No audio data to mix")
 
-        # Normalize to prevent clipping
+        # Normalize only if clipping occurs
         max_amplitude = np.abs(mixed_audio).max()
-        if max_amplitude > 0:
+        if max_amplitude > 1.0:
             mixed_audio = mixed_audio * (NORMALIZATION_HEADROOM / max_amplitude)
 
         # Generate output filename
@@ -105,8 +105,9 @@ def _sanitize_filename(filename: str) -> str:
     # Replace spaces with underscores
     filename = filename.replace(' ', '_')
 
-    # Remove special characters, keep only alphanumeric, underscore, hyphen
-    filename = re.sub(r'[^a-zA-Z0-9_\-]', '', filename)
+    # Remove only characters forbidden by common filesystems (/, \, :, *, ?, ", <, >, |)
+    # and control characters — preserve Unicode (accents, kanji, etc.)
+    filename = re.sub(r'[/\\:*?"<>|\x00-\x1f]', '', filename)
 
     # Limit length to 100 characters
     if len(filename) > 100:

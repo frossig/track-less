@@ -1,5 +1,6 @@
 """CLI interface for track-less."""
 
+import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -21,9 +22,11 @@ from .exceptions import TrackLessError, DownloadError, SeparationError, MixingEr
 @click.option('-b', '--bass', is_flag=True, help='Remove bass track')
 @click.option('-p', '--piano', is_flag=True, help='Remove piano track')
 @click.option('--other', is_flag=True, help='Remove other instruments track')
-@click.option('-o', '--output', type=click.Path(), help='Output directory (default: ~/Projects/track-less-output)')
+@click.option('-s', '--stem', is_flag=True, help='Extract stems instead of mixing (saves raw stem files)')
+@click.option('-P', '--preview', is_flag=True, help='Process only the first 30 seconds (quick test)')
+@click.option('-o', '--output', type=click.Path(), help='Output directory (default: ~/Music/track-less)')
 @click.version_option(version=__version__, prog_name='track-less')
-def main(url, guitar, vocals, drums, bass, piano, other, output):
+def main(url, guitar, vocals, drums, bass, piano, other, stem, preview, output):
     """
     Remove instrument tracks from songs using AI stem separation.
 
@@ -53,8 +56,9 @@ def main(url, guitar, vocals, drums, bass, piano, other, output):
 
         # Validate that at least one instrument is selected
         if not instruments_to_remove:
+            action = "extract" if stem else "remove"
             click.echo(
-                "Error: Please specify at least one instrument to remove.\n"
+                f"Error: Please specify at least one instrument to {action}.\n"
                 "Use -g (guitar), -v (vocals), -d (drums), -b (bass), -p (piano), or --other.",
                 err=True
             )
@@ -75,7 +79,12 @@ def main(url, guitar, vocals, drums, bass, piano, other, output):
         output_dir.mkdir(parents=True, exist_ok=True)
 
         click.echo(f"track-less v{__version__}")
-        click.echo(f"Removing: {', '.join(instruments_to_remove)}")
+        if stem:
+            click.echo(f"Extracting stems: {', '.join(instruments_to_remove)}")
+        else:
+            click.echo(f"Removing: {', '.join(instruments_to_remove)}")
+        if preview:
+            click.echo("Preview mode: first 30 seconds only")
         click.echo(f"Output directory: {output_dir}\n")
 
         # Use temporary directory for intermediate files
@@ -85,7 +94,7 @@ def main(url, guitar, vocals, drums, bass, piano, other, output):
             # Step 1: Download audio from YouTube
             click.echo("Step 1/3: Downloading audio from YouTube...")
             try:
-                audio_file, title = download_audio(url, str(temp_path))
+                audio_file, title = download_audio(url, str(temp_path), preview=preview)
                 click.echo(f"✓ Downloaded: {title}\n")
             except DownloadError as e:
                 click.echo(f"✗ Download failed: {str(e)}", err=True)
@@ -101,24 +110,38 @@ def main(url, guitar, vocals, drums, bass, piano, other, output):
                 click.echo(f"✗ Separation failed: {str(e)}", err=True)
                 sys.exit(1)
 
-            # Step 3: Mix stems (excluding selected instruments)
-            click.echo("Step 3/3: Mixing stems...")
-            try:
-                output_file = mix_stems(
-                    stems_dir,
-                    instruments_to_remove,
-                    output_dir,
-                    title
-                )
-                click.echo(f"✓ Mixed successfully\n")
-            except MixingError as e:
-                click.echo(f"✗ Mixing failed: {str(e)}", err=True)
-                sys.exit(1)
+            # Step 3: Extract stems or mix
+            if stem:
+                click.echo("Step 3/3: Extracting stems...")
+                output_files = []
+                for instrument in instruments_to_remove:
+                    src = stems_dir / f"{instrument}.wav"
+                    dst = output_dir / f"{title}_{instrument}.wav"
+                    shutil.copy2(src, dst)
+                    output_files.append(dst)
+                click.echo(f"✓ Extracted {len(output_files)} stem(s)\n")
+            else:
+                click.echo("Step 3/3: Mixing stems...")
+                try:
+                    output_file = mix_stems(
+                        stems_dir,
+                        instruments_to_remove,
+                        output_dir,
+                        title
+                    )
+                    click.echo(f"✓ Mixed successfully\n")
+                except MixingError as e:
+                    click.echo(f"✗ Mixing failed: {str(e)}", err=True)
+                    sys.exit(1)
 
         # Success!
         click.echo("=" * 60)
         click.echo("Success! Output saved to:")
-        click.echo(f"  {output_file}")
+        if stem:
+            for f in output_files:
+                click.echo(f"  {f}")
+        else:
+            click.echo(f"  {output_file}")
         click.echo("=" * 60)
 
     except KeyboardInterrupt:
